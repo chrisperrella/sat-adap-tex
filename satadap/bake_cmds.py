@@ -14,8 +14,7 @@ def spawn_context():
 	return sbs_context
 
 
-def update_sbs( sbsdoc_path ):
-	sbs_context = spawn_context()
+def update_sbs( sbs_context, sbsdoc_path ):
 	sbsdoc = substance.SBSDocument( sbs_context, str( sbsdoc_path ) )
 	sbsdoc.parseDoc()
 
@@ -27,11 +26,10 @@ def update_sbs( sbsdoc_path ):
 	subprocess.run( cmdline )
 
 
-def cook_sbsar( sbsdoc_path, output_path = None ):	
+def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):	
 	if output_path is None:
 		output_path = sbsdoc_path.with_suffix('').with_suffix('.sbsar')
 
-	sbs_context = spawn_context()
 	sbsdoc = substance.SBSDocument( sbs_context, str( sbsdoc_path ) )
 	
 	try:
@@ -39,20 +37,18 @@ def cook_sbsar( sbsdoc_path, output_path = None ):
 	except SBSIncompatibleVersionError:
 		update_sbs( sbsdoc_path )
 		sbsdoc.parseDoc()		
-
+	
 	cmdline = [sbs_context.getBatchToolExePath( sbsenum.BatchToolsEnum.COOKER ),
 			   '--quiet',
 			   '--enable-icons',
 			   '--output-path', str( output_path ),
-			   '--alias', ' '.join(sbs_context.getUrlAliasMgr().getAllAliases()),
+			   f' --alias {" --alias ".join(sbs_context.getUrlAliasMgr().getAllAliases())} ',
 			   '--inputs', str( sbsdoc_path ) ]
 
 	subprocess.run( cmdline )
 
 
-def bake_sbsar( sbsdoc_path, identifier, mesh_dict, bake_dict, output_size = 10, bake_arguments = None):
-	sbs_context = spawn_context()
-
+def bake_sbsar( sbs_context, sbsdoc_path, identifier, mesh_dict, bake_dict, output_size = 10, bake_arguments = None):
 	optional_arguments = ''
 	try:
 		optional_arguments = bake_dict['BakeArguments']
