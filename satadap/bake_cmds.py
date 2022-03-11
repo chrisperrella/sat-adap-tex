@@ -1,7 +1,7 @@
 import os, subprocess
 from pathlib import Path
 
-from pysbs import context, substance, sbsenum
+from pysbs import context, substance, sbsenum, batchtools
 from pysbs.api_exceptions import SBSIncompatibleVersionError
 
 
@@ -10,6 +10,12 @@ def spawn_context():
 	project_manager = context.ProjectMgr(aSbsPrjFilePath=user_sbsprj)
 	project_manager.populateUrlAliasesMgr()
 	sbs_context = project_manager.getContext()
+
+	#work around for a bug in pysbs on windows
+	alias_manager = sbs_context.getUrlAliasMgr()
+	for alias in alias_manager.getAllAliases():
+		alias_name, alias_path = alias.rsplit(':///')
+		alias_manager.setAliasAbsPath(alias_name, alias_path)
 	
 	return sbs_context
 
@@ -28,7 +34,7 @@ def update_sbs( sbs_context, sbsdoc_path ):
 
 def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):	
 	if output_path is None:
-		output_path = sbsdoc_path.with_suffix('').with_suffix('.sbsar')
+		output_path = sbsdoc_path.parent
 
 	sbsdoc = substance.SBSDocument( sbs_context, str( sbsdoc_path ) )
 	
@@ -36,16 +42,13 @@ def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):
 		sbsdoc.parseDoc()
 	except SBSIncompatibleVersionError:
 		update_sbs( sbsdoc_path )
-		sbsdoc.parseDoc()		
-	
-	cmdline = [sbs_context.getBatchToolExePath( sbsenum.BatchToolsEnum.COOKER ),
-			   '--quiet',
-			   '--enable-icons',
-			   '--output-path', str( output_path ),
-			   f' --alias {" --alias ".join(sbs_context.getUrlAliasMgr().getAllAliases())} ',
-			   '--inputs', str( sbsdoc_path ) ]
+		sbsdoc.parseDoc()
 
-	subprocess.run( cmdline )
+	batchtools.sbscooker(quiet =True,
+                         inputs = str( sbsdoc_path ),
+                         includes = sbs_context.getDefaultPackagePath(),
+                         alias = sbs_context.getUrlAliasMgr().getAllAliases(),
+                         output_path = str( output_path )).wait()	
 
 
 def bake_sbsar( sbs_context, sbsdoc_path, identifier, mesh_dict, bake_dict, output_size = 10, bake_arguments = None):
