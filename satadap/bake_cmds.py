@@ -20,16 +20,10 @@ def spawn_context():
 	return sbs_context
 
 
-def update_sbs( sbs_context, sbsdoc_path ):
-	sbsdoc = substance.SBSDocument( sbs_context, str( sbsdoc_path ) )
-	sbsdoc.parseDoc()
-
-	cmdline = [sbs_context.getBatchToolExePath( sbsenum.BatchToolsEnum.COOKER ),
-			   '--quiet',
-			   '--enable-icons',
-			   '--inputs', str( sbsdoc_path ) ]
-	
-	subprocess.run( cmdline )
+def update_sbs( sbs_context, sbsdoc_path ):	
+	batchtools.sbsupdater(quiet =True,
+					      inputs = str( sbsdoc_path ),
+						  alias = sbs_context.getUrlAliasMgr().getAllAliases()).wait
 
 
 def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):	
@@ -41,7 +35,7 @@ def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):
 	try:
 		sbsdoc.parseDoc()
 	except SBSIncompatibleVersionError:
-		update_sbs( sbsdoc_path )
+		update_sbs( sbs_context, sbsdoc_path )
 		sbsdoc.parseDoc()
 
 	batchtools.sbscooker(quiet =True,
@@ -51,7 +45,7 @@ def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):
                          output_path = str( output_path )).wait()	
 
 
-def bake_sbsar( sbs_context, sbsdoc_path, identifier, mesh_dict, bake_dict, output_size = 10, bake_arguments = None):
+def bake_model( sbs_context, sbsdoc_path, identifier, mesh_dict, bake_dict, output_size = 10, bake_arguments = None):
 	optional_arguments = ''
 	try:
 		optional_arguments = bake_dict['BakeArguments']
