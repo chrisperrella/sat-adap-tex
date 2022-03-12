@@ -48,12 +48,12 @@ def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):
 def bake_model( sbs_context, sbsdoc_path, identifier, mesh_dict, bake_dict, output_size = 10, bake_arguments = None):
 	optional_arguments = ''
 	try:
-		optional_arguments = bake_dict['BakeArguments']
+		optional_arguments = bake_dict['Arguments']
 	except KeyError:
 		pass
 
 	cmdline = [sbs_context.getBatchToolExePath( sbsenum.BatchToolsEnum.BAKER ),
-	           bake_dict['BakeTool'],
+	           bake_dict['Type'],
 			   '--output-name', f'{bake_dict["Operation"]}',
 			   f'{" ".join(optional_arguments)} {" ".join(bake_arguments)}',
 			   '--apply-diffusion', 'false',

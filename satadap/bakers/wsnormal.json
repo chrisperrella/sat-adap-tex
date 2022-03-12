@@ -1,0 +1,17 @@
+{
+    "Operation" : "World Space Normals",
+    "Type" : "normal-from-mesh",
+    "Enum" : "WORLD_SPACE_NORMALS",
+    "ParameterValues" : {
+        "ConverterParamEnum" : "NORMAL_ORIENTATION",
+        "ParamValue" : "False"
+    },
+    "Node" : {
+        "OutputFormat" : 1,
+        "ColorMode" : "True"
+    },        
+    "Arguments" : [
+            "--normal-format", "1",
+            "--map-type", "0"
+        ]
+}

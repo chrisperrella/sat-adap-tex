@@ -1,0 +1,16 @@
+{
+    "Operation" : "Normal Map from Mesh",
+    "Type" : "normal-from-mesh",
+    "Enum" : "NORMAL_MAP_FROM_MESH",
+    "ParameterValues" : {
+        "ConverterParamEnum" : "NORMAL_ORIENTATION",
+        "ParamValue" : "False"
+    },
+    "Node" : {
+        "OutputFormat" : 1,
+        "ColorMode" : "True"
+    },        
+    "Arguments" : [
+            "--normal-format", "0"
+        ]
+}

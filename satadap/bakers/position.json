@@ -1,0 +1,9 @@
+{
+    "Operation" : "Position Map from Mesh",
+    "Type" : "position-from-mesh",
+    "Enum" : "POSITION_MAP_FROM_MESH",
+    "Node" : {
+        "OutputFormat" : 1,
+        "ColorMode" : "True"
+    }
+}

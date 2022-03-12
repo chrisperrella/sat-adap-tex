@@ -1,0 +1,16 @@
+{
+    "Operation": "Color Map from Mesh",
+    "Type" : "color-from-mesh",
+    "Enum" : "COLOR_MAP_FROM_MESH",
+    "ParameterValues": {
+        "ConverterParamEnum" : "COLOR_SOURCE",
+        "BakerColorSourceEnum" : "MATERIAL_COLOR"
+    },
+    "Node" : {
+        "OutputFormat" : 1,
+        "ColorMode" : "True"
+    },
+    "Arguments" : [
+            "--color-source", "1"
+        ]
+}

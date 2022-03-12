@@ -1,0 +1,13 @@
+{
+    "Operation" : "Ambient Occlusion Map from Mesh",
+    "Type" : "ambient-occlusion-from-mesh",
+    "Enum" : "AMBIENT_OCCLUSION_FROM_MESH",
+    "ParameterValues" : {
+        "ConverterParamEnum" : "ATTENUATION",
+        "ParamValue": "1"
+    },
+    "Node" : {
+        "OutputFormat" : 0,
+        "ColorMode" : "False"
+    }
+}
