@@ -1,8 +1,13 @@
-import os, subprocess
+import os, subprocess, json
 from pathlib import Path
 
 from pysbs import context, substance, sbsenum, batchtools
 from pysbs.api_exceptions import SBSIncompatibleVersionError
+
+
+class BakeModelError(Exception):
+	def __init__(self, message='[SATADAP] Baker Config doesnt exist!'):
+		super(BakeError, self).__init__(message)
 
 
 def spawn_context():
@@ -22,7 +27,7 @@ def spawn_context():
 
 def update_sbs( sbs_context, sbsdoc_path ):	
 	batchtools.sbsupdater(quiet =True,
-					      inputs = str( sbsdoc_path ),
+						  inputs = str( sbsdoc_path ),
 						  alias = sbs_context.getUrlAliasMgr().getAllAliases()).wait
 
 
@@ -39,29 +44,39 @@ def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):
 		sbsdoc.parseDoc()
 
 	batchtools.sbscooker(quiet =True,
-                         inputs = str( sbsdoc_path ),
-                         includes = sbs_context.getDefaultPackagePath(),
-                         alias = sbs_context.getUrlAliasMgr().getAllAliases(),
-                         output_path = str( output_path )).wait()	
+						 inputs = str( sbsdoc_path ),
+						 includes = sbs_context.getDefaultPackagePath(),
+						 alias = sbs_context.getUrlAliasMgr().getAllAliases(),
+						 output_path = str( output_path )).wait()	
 
 
-def bake_model( sbs_context, sbsdoc_path, identifier, mesh_dict, bake_dict, output_size = 10, bake_arguments = None):
-	optional_arguments = ''
-	try:
-		optional_arguments = bake_dict['Arguments']
-	except KeyError:
-		pass
+def bake_model( sbs_context, output_path, identifier, operation, mesh_dict, output_size = 10, bake_arguments = ''):
+	baker_path = Path( Path(__file__).parent.absolute(), 'bakers', f'{operation}.json')
+	if baker_path.is_file:		
+		with open(baker_path) as json_file:    
+			baker_config = json.load(json_file)
 
-	cmdline = [sbs_context.getBatchToolExePath( sbsenum.BatchToolsEnum.BAKER ),
-	           bake_dict['Type'],
-			   '--output-name', f'{bake_dict["Operation"]}',
-			   f'{" ".join(optional_arguments)} {" ".join(bake_arguments)}',
-			   '--apply-diffusion', 'false',
-			   '--antialiasing', '2',
-			   '--inputs', str(mesh_dict['LowRes']),
-			   '--highdef-mesh', str(mesh_dict['HighRes']),
-			   '--output-size', str(output_size),
-			   '--dilation-width', '128',
-			   '--output-path', str(Path(sbsdoc_path.parent / f'{identifier}.resources'))]
-	
-	subprocess.run( cmdline )
+		try:
+			optional_arguments = baker_config['Arguments']	
+		except KeyError:
+			optional_arguments = ''
+
+		output_path = Path(output_path / f'{identifier}.resources')
+		output_path.mkdir(parents=True, exist_ok=True)
+
+		cmdline = [sbs_context.getBatchToolExePath( sbsenum.BatchToolsEnum.BAKER ),
+					baker_config['Command'],
+					'--output-name', f'"{baker_config["Operation"]}"',
+					f'{" ".join(optional_arguments)} {" ".join(bake_arguments)}',
+					'--apply-diffusion', 'false',
+					'--antialiasing', '2',
+					'--inputs', str(mesh_dict['Low']),
+					'--highdef-mesh', str(mesh_dict['High']),
+					'--output-size', f"{output_size},{output_size}",
+					'--dilation-width', '128',
+					'--output-path', str(output_path)]
+
+		subprocess.run(' '.join(cmdline))
+
+	else:
+		raise BakeModelError

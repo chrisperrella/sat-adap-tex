@@ -1,6 +1,6 @@
 {
     "Operation" : "Normal Map from Mesh",
-    "Type" : "normal-from-mesh",
+    "Command" : "normal-from-mesh",
     "Enum" : "NORMAL_MAP_FROM_MESH",
     "ParameterValues" : {
         "ConverterParamEnum" : "NORMAL_ORIENTATION",

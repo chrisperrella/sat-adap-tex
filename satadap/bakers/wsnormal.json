@@ -1,6 +1,6 @@
 {
     "Operation" : "World Space Normals",
-    "Type" : "normal-from-mesh",
+    "Command" : "normal-from-mesh",
     "Enum" : "WORLD_SPACE_NORMALS",
     "ParameterValues" : {
         "ConverterParamEnum" : "NORMAL_ORIENTATION",

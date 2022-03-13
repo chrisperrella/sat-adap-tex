@@ -1,6 +1,6 @@
 {
     "Operation" : "Curvature Map from Mesh",
-    "Type" : "curvature-from-mesh-v2",
+    "Command" : "curvature-from-mesh-v2",
     "Enum" : "CURVATURE_MAP_FROM_MESH",
     "Node" : {
         "OutputFormat" : 0,

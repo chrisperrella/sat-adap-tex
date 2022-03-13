@@ -1,6 +1,6 @@
 {
     "Operation": "Color Map from Mesh",
-    "Type" : "color-from-mesh",
+    "Command" : "color-from-mesh",
     "Enum" : "COLOR_MAP_FROM_MESH",
     "ParameterValues": {
         "ConverterParamEnum" : "COLOR_SOURCE",
