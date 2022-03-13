@@ -18,8 +18,8 @@ def test_update_sbs(context):
 def test_bake_model(context):
     bakers = ['colorid', 'curvature', 'normal', 'occlusion', 'position', 'wsnormal']
     for baker in bakers:
-        output_path = Path(__file__).parent.absolute()
-        bake_cmds.bake_model( context, test_mesh_dict['Low'].parent, test_mesh_dict['Low'].stem, baker, test_mesh_dict )
+        output_path = Path( test_mesh_dict['Low'].parent, test_mesh_dict['Low'].stem)
+        bake_cmds.bake_model( context, output_path, baker, test_mesh_dict )
 
 
 def main():

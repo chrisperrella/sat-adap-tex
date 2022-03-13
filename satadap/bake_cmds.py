@@ -50,9 +50,9 @@ def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):
 						 output_path = str( output_path )).wait()	
 
 
-def bake_model( sbs_context, output_path, identifier, operation, mesh_dict, output_size = 10, bake_arguments = ''):
+def bake_model( sbs_context, output_path, operation, mesh_dict, output_size = 10, bake_arguments = ''):
 	baker_path = Path( Path(__file__).parent.absolute(), 'bakers', f'{operation}.json')
-	if baker_path.is_file:		
+	if baker_path.is_file:
 		with open(baker_path) as json_file:    
 			baker_config = json.load(json_file)
 
@@ -61,7 +61,8 @@ def bake_model( sbs_context, output_path, identifier, operation, mesh_dict, outp
 		except KeyError:
 			optional_arguments = ''
 
-		output_path = Path(output_path / f'{identifier}.resources')
+		file_name = output_path.stem
+		output_path = Path(output_path.parent / f'{file_name}.resources')
 		output_path.mkdir(parents=True, exist_ok=True)
 
 		cmdline = [sbs_context.getBatchToolExePath( sbsenum.BatchToolsEnum.BAKER ),
@@ -76,6 +77,7 @@ def bake_model( sbs_context, output_path, identifier, operation, mesh_dict, outp
 					'--dilation-width', '128',
 					'--output-path', str(output_path)]
 
+		print(f'[SATADAP] Running bake command for: {baker_config["Command"]}')
 		subprocess.run(' '.join(cmdline))
 
 	else:
