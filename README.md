@@ -1,3 +1,4 @@
 # sat-adap-tex
 
-<img width="833" alt="image" src="https://user-images.githubusercontent.com/8780192/157609890-4e9b4030-2854-4764-ac1c-bfd5c6bc0c26.png">
+<img width="844" alt="image" src="https://user-images.githubusercontent.com/8780192/158216655-48cd770e-2cb2-43ee-9ce9-85ea8b4509b8.png">
+
