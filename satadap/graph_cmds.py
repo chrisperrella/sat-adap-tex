@@ -62,19 +62,19 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 
 		if bake_model:
 			try:
-				operation = bake_cmds.bake_model( sbs_context, sbsdoc_path, baker_config_path, mesh_dict )				
+				baker_config = bake_cmds.bake_model( sbs_context, sbsdoc_path, baker_config_path, mesh_dict )				
 			except bake_cmds.BakeModelConfigError:
-				print( f'[SATADAP] Failed to bake {operation}' )
+				print( f'[SATADAP] Failed to bake {baker_config["Operation"]}!' )
 				continue
 
 		else:
 			import json
 			with open(baker_config_path) as json_file:
-				operation = json.load(json_file)['Operation']
+				baker_config = json.load(json_file)
 
-		print(f'[SATADAP] Linking resources for: {operation}')
+		print(f'[SATADAP] Linking resources for: {baker_config["Operation"]}')
 		meshes_alias_path = Path(sbs_context.getUrlAliasMgr().getAliasAbsPath( 'meshes' ))
-		resource_path = Path(f'{meshes_alias_path}/{sbsdoc_path.relative_to(meshes_alias_path).parent}/{sbsdoc_path.stem}.resources/{operation}.png')
+		resource_path = Path(f'{meshes_alias_path}/{sbsdoc_path.relative_to(meshes_alias_path).parent}/{sbsdoc_path.stem}.resources/{baker_config["Operation"]}.png')
 		document.createLinkedResource( str(resource_path),
 									   aResourceTypeEnum=3, 
 									   aIdentifier=resource_path.stem.replace(' ', '_').lower() )

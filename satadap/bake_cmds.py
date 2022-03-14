@@ -78,7 +78,7 @@ def bake_model( sbs_context, output_path, baker_config_path, mesh_dict, output_s
 
 		print(f'[SATADAP] Running bake command for: {baker_config["Command"]}')
 		subprocess.Popen(' '.join(cmdline)).wait()
-		return Path(baker_config["Operation"])
+		return baker_config
 
 	else:
 		raise BakeModelConfigError
