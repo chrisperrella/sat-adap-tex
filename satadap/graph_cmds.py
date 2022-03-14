@@ -1,6 +1,10 @@
+import glob
+from pathlib import Path
+from os.path import relpath
+
 from satadap import bake_cmds
 
-from pysbs import sbsarchive
+from pysbs import sbsarchive, sbsgenerator
 from pysbs.api_exceptions import SBSImpossibleActionError
 
 
@@ -44,3 +48,35 @@ def node_connect( graph, source_node, source_output, destination_node, destinati
 			print( f'[SATADAP] {destination_node.getDisplayName()} has no input named {destination_input}' )
 			print( f'[SATADAP] Available inputs {destination_inputs}' )	
 		pass
+
+
+def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
+	document = sbsgenerator.createSBSDocument( sbs_context, str(sbsdoc_path.parent), str(sbsdoc_path.stem) )
+	graph = document.getSBSGraph( str(sbsdoc_path.stem) )
+
+	baker_config_dir = Path( Path(__file__).parent.absolute(), 'bakers' )
+	baker_configs = glob.glob(f"{str(baker_config_dir)}/*.json")
+	for baker_config in baker_configs:
+		baker_config_path = Path( baker_config )
+		operation = baker_config_path.stem		
+
+		if bake_model:
+			try:
+				operation = bake_cmds.bake_model( sbs_context, sbsdoc_path, baker_config_path, mesh_dict )				
+			except bake_cmds.BakeModelConfigError:
+				print( f'[SATADAP] Failed to bake {operation}' )
+				continue
+
+		else:
+			import json
+			with open(baker_config_path) as json_file:
+				operation = json.load(json_file)['Operation']
+
+		print(f'[SATADAP] Linking resources for: {operation}')
+		meshes_alias_path = Path(sbs_context.getUrlAliasMgr().getAliasAbsPath( 'meshes' ))
+		resource_path = Path(f'{meshes_alias_path}/{sbsdoc_path.relative_to(meshes_alias_path).parent}/{sbsdoc_path.stem}.resources/{operation}.png')
+		document.createLinkedResource( str(resource_path),
+									   aResourceTypeEnum=3, 
+									   aIdentifier=resource_path.stem.replace(' ', '_').lower() )
+
+	document.writeDoc( str(sbsdoc_path) )	

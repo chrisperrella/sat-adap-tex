@@ -5,9 +5,9 @@ from pysbs import context, substance, sbsenum, batchtools
 from pysbs.api_exceptions import SBSIncompatibleVersionError
 
 
-class BakeModelError(Exception):
+class BakeModelConfigError(Exception):
 	def __init__(self, message='[SATADAP] Baker Config doesnt exist!'):
-		super(BakeError, self).__init__(message)
+		super(BakeModelConfigError, self).__init__(message)
 
 
 def spawn_context():
@@ -50,10 +50,9 @@ def cook_sbsar( sbs_context, sbsdoc_path, output_path = None ):
 						 output_path = str( output_path )).wait()	
 
 
-def bake_model( sbs_context, output_path, operation, mesh_dict, output_size = 10, bake_arguments = ''):
-	baker_path = Path( Path(__file__).parent.absolute(), 'bakers', f'{operation}.json')
-	if baker_path.is_file:
-		with open(baker_path) as json_file:    
+def bake_model( sbs_context, output_path, baker_config_path, mesh_dict, output_size = 10, bake_arguments = ''):	
+	if baker_config_path.is_file:
+		with open(baker_config_path) as json_file:    
 			baker_config = json.load(json_file)
 
 		try:
@@ -78,7 +77,8 @@ def bake_model( sbs_context, output_path, operation, mesh_dict, output_size = 10
 					'--output-path', str(output_path)]
 
 		print(f'[SATADAP] Running bake command for: {baker_config["Command"]}')
-		subprocess.run(' '.join(cmdline))
+		subprocess.Popen(' '.join(cmdline)).wait()
+		return Path(baker_config["Operation"])
 
 	else:
-		raise BakeModelError
+		raise BakeModelConfigError
