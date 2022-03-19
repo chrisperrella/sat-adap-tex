@@ -82,3 +82,12 @@ def bake_model( sbs_context, output_path, baker_config_path, mesh_dict, output_s
 
 	else:
 		raise BakeModelConfigError
+
+
+def get_material_config( material_type='metallic_roughness' ):
+	material_config_path = Path( Path(__file__).parent.absolute(), 'materials', f'{material_type}.json')
+	if material_config_path.is_file:
+		with open(material_config_path) as json_file:    
+			material_config = json.load(json_file)
+	
+		return material_config
