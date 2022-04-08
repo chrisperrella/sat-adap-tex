@@ -1,9 +1,11 @@
-import os, weakref
+import os, weakref, sys
 from functools import partial
 from pathlib import Path
 from PySide2 import QtCore, QtGui, QtWidgets, QtSvg
 
 import sd
+from sd.api.apiexception import APIException
+from sd.api.sdvaluestring import SDValueString
 
 def icon_svg(name, size):
     currentDir = os.path.dirname(__file__)
@@ -43,6 +45,8 @@ class AdaptiveTexturingShelf(QtWidgets.QToolBar):
     def __init__(self, graphViewID, ui_mrg):
         super(AdaptiveTexturingShelf, self).__init__(parent=ui_mrg.getMainWindow())
 
+        sys.path.append(Path(Path(__file__).parent.absolute(), 'satadap').as_posix())
+
         self.__graphViewID = graphViewID
         self.__uiMgr = ui_mrg
 
@@ -53,13 +57,18 @@ class AdaptiveTexturingShelf(QtWidgets.QToolBar):
         self.__toolbarList[graphViewID] = weakref.ref(self)
         self.destroyed.connect(partial(AdaptiveTexturingShelf.__onToolbarDeleted, graphViewID=graphViewID))
 
-
     def tooltip(self):
         return self.tr("Adaptive Texturing")
             
     def __onGenerateHex(self):
-        print('Generate Hex')
-
+        graph = self.__uiMgr.getCurrentGraph()
+        metadata = graph.getMetadataDict()
+        try:
+            material_id_value = metadata.getPropertyFromId("material_id").getDefaultValue().get()
+        except APIException:
+            from satadap import util
+            material_id_value = SDValueString.sNew(util.random_hex_color())
+            metadata.setPropertyValueFromId("material_id", material_id_value)       
 
     @classmethod
     def __onToolbarDeleted(cls, graphViewID):
