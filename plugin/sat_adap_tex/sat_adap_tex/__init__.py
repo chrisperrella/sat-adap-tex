@@ -7,6 +7,13 @@ import sd
 from sd.api.apiexception import APIException
 from sd.api.sdvaluestring import SDValueString
 
+def create_material_id_property(metadata):
+    from satadap import util
+    material_id_value = SDValueString.sNew(util.random_hex_color())
+    metadata.setPropertyValueFromId("material_id", material_id_value)
+    return metadata
+
+
 def icon_svg(name, size):
     currentDir = os.path.dirname(__file__)
     icon_path = os.path.abspath(os.path.join(currentDir, name + '.svg'))
@@ -39,6 +46,7 @@ def icon_svg(name, size):
 
     return None
 
+
 class AdaptiveTexturingShelf(QtWidgets.QToolBar):
     __toolbarList = {}
 
@@ -49,6 +57,7 @@ class AdaptiveTexturingShelf(QtWidgets.QToolBar):
 
         self.__graphViewID = graphViewID
         self.__uiMgr = ui_mrg
+        self.__metadata = ui_mrg.getCurrentGraph().getMetadataDict()
 
         act = self.addAction(icon_svg("generate_hex", 64), "Generate Hex")
         act.setToolTip(self.tr("Generate Hex"))
@@ -61,14 +70,19 @@ class AdaptiveTexturingShelf(QtWidgets.QToolBar):
         return self.tr("Adaptive Texturing")
             
     def __onGenerateHex(self):
-        graph = self.__uiMgr.getCurrentGraph()
-        metadata = graph.getMetadataDict()
         try:
-            material_id_value = metadata.getPropertyFromId("material_id").getDefaultValue().get()
+            material_id_value = self.__metadata.getPropertyFromId("material_id").getDefaultValue().get()
+            dialog = QtWidgets.QMessageBox(self)
+            dialog.setText('A Material ID is already set!\nDo you want to overwrite it?')
+            dialog.setIcon(QtWidgets.QMessageBox.Warning)
+            dialog.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+            dialog.setDefaultButton(QtWidgets.QMessageBox.No)
+            result = dialog.exec_()
+            if result == QtWidgets.QMessageBox.Yes:
+                create_material_id_property(self.__metadata)
+
         except APIException:
-            from satadap import util
-            material_id_value = SDValueString.sNew(util.random_hex_color())
-            metadata.setPropertyValueFromId("material_id", material_id_value)       
+            create_material_id_property(self.__metadata)
 
     @classmethod
     def __onToolbarDeleted(cls, graphViewID):
