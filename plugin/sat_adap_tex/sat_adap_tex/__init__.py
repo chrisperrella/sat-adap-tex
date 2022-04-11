@@ -59,8 +59,8 @@ class AdaptiveTexturingShelf(QtWidgets.QToolBar):
         self.__uiMgr = ui_mrg
         self.__metadata = ui_mrg.getCurrentGraph().getMetadataDict()
 
-        act = self.addAction(icon_svg("generate_hex", 64), "Generate Hex")
-        act.setToolTip(self.tr("Generate Hex"))
+        act = self.addAction(icon_svg("generate_id", 64), "Generate Material ID")
+        act.setToolTip(self.tr("Generate Material ID"))
         act.triggered.connect(self.__onGenerateHex)
 
         self.__toolbarList[graphViewID] = weakref.ref(self)
