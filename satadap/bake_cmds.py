@@ -1,4 +1,4 @@
-import os, subprocess, json
+import os, subprocess, json, glob
 from pathlib import Path
 
 from pysbs import context, substance, sbsenum, batchtools
@@ -91,3 +91,15 @@ def get_material_config( material_type='metallic_roughness' ):
 			material_config = json.load(json_file)
 	
 		return material_config
+
+
+def get_bake_operations():
+	bake_operations = list()
+	baker_config_dir = Path( Path(__file__).parent.absolute(), 'bakers' )
+	baker_configs = glob.glob(f"{str(baker_config_dir)}/*.json")
+	for baker_config in baker_configs:
+		baker_config_path = Path( baker_config )
+		operation = baker_config_path.stem
+		bake_operations.append(operation)
+
+	return bake_operations

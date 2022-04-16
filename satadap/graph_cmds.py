@@ -1,9 +1,7 @@
 import glob, getpass, ctypes
 from pathlib import Path
-from cv2 import DescriptorMatcher
 from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
-from numpy import source
 
 from satadap import bake_cmds
 
@@ -144,7 +142,12 @@ def node_connect( graph, source_node, source_output, destination_node, destinati
 			destination_input = destination_inputs[case_insensitive_destination_inputs.index(destination_input.lower())]
 			print(f'[SATADAP] Using case-insensitive match for destination input {destination_input}')
 			node_connect( graph, source_node, source_output, destination_node, destination_input, num_tries )
-		
+
+
+def connect_bake_resources(graph, resource_node_dict, destination_node):
+	for operation, node in resource_node_dict.items():
+		node_connect( graph, node, 'output', destination_node, operation.replace(' ', '_') )
+
 
 def create_model_graph_bakers( sbs_context, 
 								sbsdoc_path, 
@@ -182,11 +185,10 @@ def create_model_graph_bakers( sbs_context,
 		resource_node_dict[baker_config["Operation"]] = resource_node	
 
 
-def create_model_graph_outputs( graph, multi_material_node, output_node_dict ):
+def create_model_graph_outputs( graph, output_node_dict ):
 	material_config = bake_cmds.get_material_config()	
 	for output in material_config['Outputs'][0]:
 		output_node = graph.createOutputNode( output.lower() )
-		#node_connect( graph, multi_material_node, output, output_node, 'inputNodeOutput' )
 		output_node_dict[output] = output_node
 	
 	return output_node_dict
@@ -202,16 +204,17 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 	graph_attribute_dict = { '0' : category_dir.parent, '1' : sbsdoc_path.stem, '2' : getpass.getuser() }
 	set_graph_attribute( graph, graph_attribute_dict )
 
-	multi_material_node_url = 'sbs://multi_material_blend.sbs'
+	multi_material_node_url = 'utilities://utility_multi_material_blend.sbs'
 	#These properties should be read off the material config, but I'm feeling lazy tonight
 	multi_material_node_params = { 'Materials': 1, 'diffuse': 0, 'specular': 0, 'glossiness': 0, 'ambient_occlusion': 1, 'opacity': 1 } 
 	multi_material_node = graph.createCompInstanceNodeFromPath( document, multi_material_node_url, aParameters=multi_material_node_params )
 
 	resource_node_dict = dict()
 	create_model_graph_bakers( sbs_context, sbsdoc_path, document, graph, category_dir, meshes_alias_dir, mesh_dict, resource_node_dict, bake_model )
+	connect_bake_resources(graph, resource_node_dict, multi_material_node)
 
 	output_node_dict = dict()
-	create_model_graph_outputs( graph, multi_material_node, output_node_dict )
+	create_model_graph_outputs( graph, output_node_dict )
 	
 	# Add the output combiner node
 	output_combiner_node_url = 'utilities://utility_output_combiner.sbs'
