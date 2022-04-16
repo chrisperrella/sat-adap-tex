@@ -1,7 +1,9 @@
 import glob, getpass, ctypes
 from pathlib import Path
+from cv2 import DescriptorMatcher
 from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
+from numpy import source
 
 from satadap import bake_cmds
 
@@ -107,14 +109,13 @@ def get_sbsar_output_nodes( sbs_context, sbsar_path, identifier=None ):
 	return output_nodes
 
 
-def node_connect( graph, source_node, source_output, destination_node, destination_input ):
-	try:
+def node_connect( graph, source_node, source_output, destination_node, destination_input, num_tries = 0 ):
+	try:		
 		graph.connectNodes( source_node, destination_node, source_output, destination_input )
 			
 	except SBSImpossibleActionError as e:
 		print(e)
 		print( f'[SATADAP] Failed to connect {source_node.getDisplayName()}.{source_output} -> {destination_node.getDisplayName()}.{destination_input}' )
-
 		source_outputs = list()
 		for plug in source_node.getDefinition().mOutputs:
 			source_outputs.append( plug.getIdentifierStr() )
@@ -128,19 +129,22 @@ def node_connect( graph, source_node, source_output, destination_node, destinati
 			print( f'[SATADAP] Available outputs {source_outputs}' )
 			
 		case_insensitive_source_outputs = [x.lower() for x in source_outputs]
-		if source_output.lower() in case_insensitive_source_outputs:
+		case_insensitive_destination_inputs = [x.lower() for x in destination_inputs]
+		
+		if source_output.lower() in case_insensitive_destination_inputs and source_output not in source_outputs:
 			source_output = source_outputs[case_insensitive_source_outputs.index(source_output.lower())]
-			node_connect( graph, source_node, source_output, destination_node, destination_input )
+			print(f'[SATADAP] Using case-insensitive match for source output {source_output}')
+			node_connect( graph, source_node, source_output, destination_node, destination_input, num_tries )
 
 		if destination_input not in destination_inputs:
 			print( f'[SATADAP] {destination_node.getDisplayName()} has no input named {destination_input}' )
-			print( f'[SATADAP] Available inputs {destination_inputs}' )	
-
-		case_insensitive_destination_inputs = [x.lower() for x in destination_inputs]
-		if source_output.lower() in case_insensitive_destination_inputs:
-			destination_input = source_outputs[case_insensitive_destination_inputs.index(destination_inputs.lower())]
-			node_connect( graph, source_node, source_output, destination_node, destination_input )
-
+			print( f'[SATADAP] Available inputs {destination_inputs}' )
+			
+		if destination_input.lower() in case_insensitive_destination_inputs  and destination_input not in destination_inputs:
+			destination_input = destination_inputs[case_insensitive_destination_inputs.index(destination_input.lower())]
+			print(f'[SATADAP] Using case-insensitive match for destination input {destination_input}')
+			node_connect( graph, source_node, source_output, destination_node, destination_input, num_tries )
+		
 
 def create_model_graph_bakers( sbs_context, 
 								sbsdoc_path, 
@@ -199,29 +203,30 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 	set_graph_attribute( graph, graph_attribute_dict )
 
 	multi_material_node_url = 'sbs://multi_material_blend.sbs'
-	multi_material_node_params = { 'Materials': 1 }
+	#These properties should be read off the material config, but I'm feeling lazy tonight
+	multi_material_node_params = { 'Materials': 1, 'diffuse': 0, 'specular': 0, 'glossiness': 0, 'ambient_occlusion': 1, 'opacity': 1 } 
 	multi_material_node = graph.createCompInstanceNodeFromPath( document, multi_material_node_url, aParameters=multi_material_node_params )
 
 	resource_node_dict = dict()
-	create_model_graph_bakers( sbs_context, sbsdoc_path, document, graph, category_dir, meshes_alias_dir, mesh_dict, resource_node_dict, bake_model )	
+	create_model_graph_bakers( sbs_context, sbsdoc_path, document, graph, category_dir, meshes_alias_dir, mesh_dict, resource_node_dict, bake_model )
 
 	output_node_dict = dict()
 	create_model_graph_outputs( graph, multi_material_node, output_node_dict )
-
-	# Composite the baked normal map with the composited materials
-	normal_combine_node_url = 'sbs://normal_combine.sbs'
-	normal_combine_node_params = { 'blend_quality': 2 }
-	normal_combine_node = graph.createCompInstanceNodeFromPath( document, normal_combine_node_url, aParameters=normal_combine_node_params )
-	node_connect( graph, multi_material_node, 'Normal', normal_combine_node, 'Input' )
-	node_connect( graph, resource_node_dict['Normal Map from Mesh'], 'output', normal_combine_node, 'Input_1' )
 	
 	# Add the output combiner node
 	output_combiner_node_url = 'utilities://utility_output_combiner.sbs'
 	output_combiner_node = graph.createCompInstanceNodeFromPath( document, output_combiner_node_url )
 	for output in output_node_dict:
-		node_connect( graph, multi_material_node, output, output_combiner_node, output)
-		node_connect( graph, output_combiner_node, output, output_node_dict[output], 'inputNodeOutput')
-	node_connect( graph, normal_combine_node, 'output', output_node_dict['Normal'], 'inputNodeOutput' )
+		node_connect( graph, output_combiner_node, output.lower(), output_node_dict[output], 'inputNodeOutput')
+		node_connect( graph, multi_material_node, output, output_combiner_node, output)	
+
+	# Composite the baked normal map with the composited materials
+	normal_combine_node_url = 'sbs://normal_combine.sbs'
+	normal_combine_node_params = { 'blend_quality': 2 }
+	normal_combine_node = graph.createCompInstanceNodeFromPath( document, normal_combine_node_url, aParameters=normal_combine_node_params )
+	node_connect( graph, output_combiner_node, 'normal', normal_combine_node, 'Input' )
+	node_connect( graph, resource_node_dict['Normal Map from Mesh'], 'output', normal_combine_node, 'Input_1' )	
+	node_connect( graph, normal_combine_node, 'normal', output_node_dict['Normal'], 'inputNodeOutput' )
 
 	layout_graph( graph )
 	document.writeDoc( str(sbsdoc_path) )

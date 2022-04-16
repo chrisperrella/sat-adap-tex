@@ -2,11 +2,12 @@
     "Outputs" : [
         {
             "Height" : "808080",
-            "BaseColor" : "404040",
-            "AmbientOcclusion" : "ffffff",
+            "Basecolor" : "404040",
+            "Ambientocclusion" : "ffffff",
             "Normal" : "8080ff",
             "Roughness" : "b3b3b3",
-            "Metallic" : "000000"
+            "Metallic" : "000000",
+            "Opacity" : "ffffff"
         }
     ]
 }
