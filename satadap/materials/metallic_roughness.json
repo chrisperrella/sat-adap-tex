@@ -2,8 +2,8 @@
     "Outputs" : [
         {
             "Height" : "808080",
-            "Basecolor" : "404040",
-            "Ambientocclusion" : "ffffff",
+            "BaseColor" : "404040",
+            "AmbientOcclusion" : "ffffff",
             "Normal" : "8080ff",
             "Roughness" : "b3b3b3",
             "Metallic" : "000000",

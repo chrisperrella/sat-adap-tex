@@ -5,7 +5,7 @@ from grandalf.graphs import Vertex, Edge, Graph
 
 from satadap import bake_cmds
 
-from pysbs import sbsarchive, sbsgenerator
+from pysbs import sbsarchive, sbsgenerator, sbsenum
 from pysbs.api_exceptions import SBSImpossibleActionError
 
 
@@ -114,34 +114,37 @@ def node_connect( graph, source_node, source_output, destination_node, destinati
 	except SBSImpossibleActionError as e:
 		print(e)
 		print( f'[SATADAP] Failed to connect {source_node.getDisplayName()}.{source_output} -> {destination_node.getDisplayName()}.{destination_input}' )
-		source_outputs = list()
-		for plug in source_node.getDefinition().mOutputs:
-			source_outputs.append( plug.getIdentifierStr() )
-		
-		destination_inputs = list()
-		for plug in destination_node.getDefinition().mInputs:
-			destination_inputs.append( plug.getIdentifierStr() )
-
-		if source_output not in source_outputs:		
-			print( f'[SATADAP] {source_node.getDisplayName()} has no output named {source_output}' )
-			print( f'[SATADAP] Available outputs {source_outputs}' )
+		try:
+			graph.connectNodes( source_node, destination_node, source_output.lower(), destination_input.lower() )
+		except:			
+			source_outputs = list()
+			for plug in source_node.getDefinition().mOutputs:
+				source_outputs.append( plug.getIdentifierStr() )
 			
-		case_insensitive_source_outputs = [x.lower() for x in source_outputs]
-		case_insensitive_destination_inputs = [x.lower() for x in destination_inputs]
-		
-		if source_output.lower() in case_insensitive_destination_inputs and source_output not in source_outputs:
-			source_output = source_outputs[case_insensitive_source_outputs.index(source_output.lower())]
-			print(f'[SATADAP] Using case-insensitive match for source output {source_output}')
-			node_connect( graph, source_node, source_output, destination_node, destination_input, num_tries )
+			destination_inputs = list()
+			for plug in destination_node.getDefinition().mInputs:
+				destination_inputs.append( plug.getIdentifierStr() )
 
-		if destination_input not in destination_inputs:
-			print( f'[SATADAP] {destination_node.getDisplayName()} has no input named {destination_input}' )
-			print( f'[SATADAP] Available inputs {destination_inputs}' )
+			if source_output not in source_outputs:		
+				print( f'[SATADAP] {source_node.getDisplayName()} has no output named {source_output}' )
+				print( f'[SATADAP] Available outputs {source_outputs}' )
+				
+			case_insensitive_source_outputs = [x.lower() for x in source_outputs]
+			case_insensitive_destination_inputs = [x.lower() for x in destination_inputs]
 			
-		if destination_input.lower() in case_insensitive_destination_inputs  and destination_input not in destination_inputs:
-			destination_input = destination_inputs[case_insensitive_destination_inputs.index(destination_input.lower())]
-			print(f'[SATADAP] Using case-insensitive match for destination input {destination_input}')
-			node_connect( graph, source_node, source_output, destination_node, destination_input, num_tries )
+			if source_output.lower() in case_insensitive_destination_inputs and source_output not in source_outputs:
+				source_output = source_outputs[case_insensitive_source_outputs.index(source_output.lower())]
+				print(f'[SATADAP] Using case-insensitive match for source output {source_output}')
+				node_connect( graph, source_node, source_output, destination_node, destination_input, num_tries )
+
+			if destination_input not in destination_inputs:
+				print( f'[SATADAP] {destination_node.getDisplayName()} has no input named {destination_input}' )
+				print( f'[SATADAP] Available inputs {destination_inputs}' )
+				
+			if destination_input.lower() in case_insensitive_destination_inputs  and destination_input not in destination_inputs:
+				destination_input = destination_inputs[case_insensitive_destination_inputs.index(destination_input.lower())]
+				print(f'[SATADAP] Using case-insensitive match for destination input {destination_input}')
+				node_connect( graph, source_node, source_output, destination_node, destination_input, num_tries )
 
 
 def connect_bake_resources(graph, resource_node_dict, destination_node):
@@ -188,7 +191,8 @@ def create_model_graph_bakers( sbs_context,
 def create_model_graph_outputs( graph, output_node_dict ):
 	material_config = bake_cmds.get_material_config()	
 	for output in material_config['Outputs'][0]:
-		output_node = graph.createOutputNode( output.lower() )
+		usages = {output.lower(): {sbsenum.UsageDataEnum.COMPONENTS: sbsenum.ComponentsEnum.RGBA}}
+		output_node = graph.createOutputNode( output.lower(), aUsages = usages )
 		output_node_dict[output] = output_node
 	
 	return output_node_dict
@@ -199,10 +203,11 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 	category_dir = sbsdoc_path.relative_to( meshes_alias_dir ).parent
 
 	document = sbsgenerator.createSBSDocument( sbs_context, str(sbsdoc_path.parent), str(sbsdoc_path.stem) )
-	graph = document.getSBSGraph( str(sbsdoc_path.stem) )
+	mesh_low_resource = document.createLinkedResource(str(mesh_dict['Low']), aResourceTypeEnum = 6, aIdentifier = 'Low')
 
+	graph = document.getSBSGraph( str(sbsdoc_path.stem) )
 	graph_attribute_dict = { '0' : category_dir.parent, '1' : sbsdoc_path.stem, '2' : getpass.getuser() }
-	set_graph_attribute( graph, graph_attribute_dict )
+	set_graph_attribute( graph, graph_attribute_dict )	
 
 	multi_material_node_url = 'utilities://utility_multi_material_blend.sbs'
 	#These properties should be read off the material config, but I'm feeling lazy tonight
@@ -215,7 +220,13 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 
 	output_node_dict = dict()
 	create_model_graph_outputs( graph, output_node_dict )
-	
+
+	default_backround_node_url = 'materials://default/background.sbs'
+	default_backround_node_params = { 'diffuse': 0, 'specular': 0, 'glossiness': 0, 'ambient_occlusion': 1, 'opacity': 1 } 
+	default_backround_node = graph.createCompInstanceNodeFromPath( document, default_backround_node_url, aParameters=default_backround_node_params )
+	for output in output_node_dict:
+		node_connect( graph, default_backround_node, output, multi_material_node, f'material1_{output}' )
+
 	# Add the output combiner node
 	output_combiner_node_url = 'utilities://utility_output_combiner.sbs'
 	output_combiner_node = graph.createCompInstanceNodeFromPath( document, output_combiner_node_url )
@@ -223,14 +234,6 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 		node_connect( graph, output_combiner_node, output.lower(), output_node_dict[output], 'inputNodeOutput')
 		node_connect( graph, multi_material_node, output, output_combiner_node, output)	
 
-	# Composite the baked normal map with the composited materials
-	normal_combine_node_url = 'sbs://normal_combine.sbs'
-	normal_combine_node_params = { 'blend_quality': 2 }
-	normal_combine_node = graph.createCompInstanceNodeFromPath( document, normal_combine_node_url, aParameters=normal_combine_node_params )
-	node_connect( graph, output_combiner_node, 'normal', normal_combine_node, 'Input' )
-	node_connect( graph, resource_node_dict['Normal Map from Mesh'], 'output', normal_combine_node, 'Input_1' )	
-	node_connect( graph, normal_combine_node, 'normal', output_node_dict['Normal'], 'inputNodeOutput' )
-
 	layout_graph( graph )
 	document.writeDoc( str(sbsdoc_path) )
-	bake_cmds.cook_sbsar( sbs_context, sbsdoc_path ) 
+	bake_cmds.cook_sbsar( sbs_context, sbsdoc_path )
