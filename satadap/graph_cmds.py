@@ -211,7 +211,10 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 
 	multi_material_node_url = 'utilities://utility_multi_material_blend.sbs'
 	#These properties should be read off the material config, but I'm feeling lazy tonight
-	multi_material_node_params = { 'Materials': 1, 'diffuse': 0, 'specular': 0, 'glossiness': 0, 'ambient_occlusion': 1, 'opacity': 1 } 
+	multi_material_node_params = { 'Materials': len(mesh_dict['Materials']) + 1, 'diffuse': 0, 'specular': 0, 'glossiness': 0, 'ambient_occlusion': 1, 'opacity': 1 } 
+	for index, material in enumerate(mesh_dict['Materials']):
+		multi_material_node_params[f'Material_{index + 2}_Color'] = material.diffuse 
+		multi_material_node_params[f'Material_{index + 2}_Padding'] = 1
 	multi_material_node = graph.createCompInstanceNodeFromPath( document, multi_material_node_url, aParameters=multi_material_node_params )
 
 	resource_node_dict = dict()
@@ -225,7 +228,7 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 	default_backround_node_params = { 'diffuse': 0, 'specular': 0, 'glossiness': 0, 'ambient_occlusion': 1, 'opacity': 1 } 
 	default_backround_node = graph.createCompInstanceNodeFromPath( document, default_backround_node_url, aParameters=default_backround_node_params )
 	for output in output_node_dict:
-		node_connect( graph, default_backround_node, output, multi_material_node, f'material1_{output}' )
+		node_connect( graph, default_backround_node, output, multi_material_node, f'material1_{output}' )	
 
 	# Add the output combiner node
 	output_combiner_node_url = 'utilities://utility_output_combiner.sbs'
