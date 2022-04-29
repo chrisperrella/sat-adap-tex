@@ -3,7 +3,7 @@ from pathlib import Path
 from grandalf.layouts import SugiyamaLayout
 from grandalf.graphs import Vertex, Edge, Graph
 
-from satadap import bake_cmds
+from satadap import bake_cmds, util
 
 from pysbs import sbsarchive, sbsgenerator, sbsenum
 from pysbs.api_exceptions import SBSImpossibleActionError
@@ -213,9 +213,20 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 	#These properties should be read off the material config, but I'm feeling lazy tonight
 	multi_material_node_params = { 'Materials': len(mesh_dict['Materials']) + 1, 'diffuse': 0, 'specular': 0, 'glossiness': 0, 'ambient_occlusion': 1, 'opacity': 1 } 
 	for index, material in enumerate(mesh_dict['Materials']):
-		multi_material_node_params[f'Material_{index + 2}_Color'] = material.diffuse 
-		multi_material_node_params[f'Material_{index + 2}_Padding'] = 1
+		if any(isinstance(el, list) for el in material):
+			multi_material_node_params[f'Material_{index + 2}_Color'] = material[-1] 
+			multi_material_node_params[f'Material_{index + 2}_Padding'] = 1					
+		else:
+			multi_material_node_params[f'Material_{index + 2}_Color'] = material 
+			multi_material_node_params[f'Material_{index + 2}_Padding'] = 1		
 	multi_material_node = graph.createCompInstanceNodeFromPath( document, multi_material_node_url, aParameters=multi_material_node_params )
+
+	#Create the submaterial graphs
+	for material in mesh_dict['Materials']:
+		if any(isinstance(el, list) for el in material):
+			print('A Composite Material Was Found!')
+		else:
+			hex_color = util.rgb_to_hex(material)
 
 	resource_node_dict = dict()
 	create_model_graph_bakers( sbs_context, sbsdoc_path, document, graph, category_dir, meshes_alias_dir, mesh_dict, resource_node_dict, bake_model )

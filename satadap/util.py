@@ -13,5 +13,12 @@ def get_obj_materials( obj_path ):
     scene.parse()
     materials = list()
     for name, material in scene.materials.items():
-        materials.append( material )
+        materials.append( material.diffuse )
     return materials
+
+def rgb_to_hex( rgb ):
+    import matplotlib
+    if len(rgb) > 3:
+        return matplotlib.colors.to_hex(rgb)
+    else:
+        return matplotlib.colors.to_hex(rgb, keep_alpha=False)
