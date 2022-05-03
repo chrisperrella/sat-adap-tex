@@ -5,8 +5,36 @@ from grandalf.graphs import Vertex, Edge, Graph
 
 from satadap import bake_cmds, util
 
-from pysbs import sbsarchive, sbsgenerator, sbsenum
+from pysbs import sbsarchive, sbsgenerator, sbsenum, substance
 from pysbs.api_exceptions import SBSImpossibleActionError
+
+
+class MaterialLibrary(object):
+	def __init__(self, sbs_context, path):
+		self.library = dict()
+		paths = glob.glob(f"{str(path)}/**/*.sbs", recursive=True)
+		for path in paths:
+			path = Path(path)
+			document = substance.SBSDocument(aContext = sbs_context, aFileAbsPath = str(path))
+			document.parseDoc(aResolveDependencies = False)
+			document_relative_path = str(path).replace(str(path.parent.parent), '')
+			for graph in document.getSBSGraphList():
+				metadata = graph.getAllMetaData()
+				try:
+					self.library[f'#{metadata["material_id"]}'] = f'materials:{document_relative_path}/{graph.mIdentifier}'.replace('\\', '//')
+				except KeyError:
+					pass
+	
+	def get_material(self, material_id):
+		try:
+			return self.library[material_id]
+		except KeyError:
+			#return the missing material id
+			return self.library['#d218c0']
+
+	def print_library(self):
+		for key, value in self.library.items():
+			print(f"{key} : {value}")
 
 
 class NodeHierarchy(object):
@@ -199,6 +227,7 @@ def create_model_graph_outputs( graph, output_node_dict ):
 
 
 def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
+	library = MaterialLibrary( sbs_context, Path( sbs_context.getUrlAliasMgr().getAliasAbsPath( 'materials' ) ) )
 	meshes_alias_dir = Path( sbs_context.getUrlAliasMgr().getAliasAbsPath( 'meshes' ) )
 	category_dir = sbsdoc_path.relative_to( meshes_alias_dir ).parent
 
@@ -218,15 +247,9 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 			multi_material_node_params[f'Material_{index + 2}_Padding'] = 1					
 		else:
 			multi_material_node_params[f'Material_{index + 2}_Color'] = material 
-			multi_material_node_params[f'Material_{index + 2}_Padding'] = 1		
-	multi_material_node = graph.createCompInstanceNodeFromPath( document, multi_material_node_url, aParameters=multi_material_node_params )
+			multi_material_node_params[f'Material_{index + 2}_Padding'] = 1
 
-	#Create the submaterial graphs
-	for material in mesh_dict['Materials']:
-		if any(isinstance(el, list) for el in material):
-			print('A Composite Material Was Found!')
-		else:
-			hex_color = util.rgb_to_hex(material)
+	multi_material_node = graph.createCompInstanceNodeFromPath( document, multi_material_node_url, aParameters=multi_material_node_params )	
 
 	resource_node_dict = dict()
 	create_model_graph_bakers( sbs_context, sbsdoc_path, document, graph, category_dir, meshes_alias_dir, mesh_dict, resource_node_dict, bake_model )
@@ -241,6 +264,19 @@ def create_model_graph( sbs_context, sbsdoc_path, mesh_dict, bake_model=True ):
 	for output in output_node_dict:
 		node_connect( graph, default_backround_node, output, multi_material_node, f'material1_{output}' )	
 
+	#Create the submaterial graphs
+	sub_materials_dict = dict()
+	for index, material in enumerate(mesh_dict['Materials']):
+		if any(isinstance(index, list) for index in material):
+			print('A Composite Material Was Found!')
+		else:
+			hex_color = util.rgb_to_hex(material)
+			material_path = library.get_material( hex_color )
+			sub_material_node = graph.createCompInstanceNodeFromPath( document, str(material_path) )
+			sub_materials_dict[sub_material_node.mUID] = sub_material_node
+			for output in output_node_dict:
+				node_connect( graph, sub_material_node, output, multi_material_node, f'material{index + 2}_{output}' )
+	
 	# Add the output combiner node
 	output_combiner_node_url = 'utilities://utility_output_combiner.sbs'
 	output_combiner_node = graph.createCompInstanceNodeFromPath( document, output_combiner_node_url )
